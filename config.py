@@ -5,13 +5,23 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# LLM Provider: "groq" (free), "gemini" (free) or "anthropic" (paid)
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "groq")
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
+def _get_secret(key: str, default: str = "") -> str:
+    """Read from Streamlit secrets (cloud) or environment variables (local)."""
+    try:
+        import streamlit as st
+        return st.secrets.get(key, os.getenv(key, default))
+    except Exception:
+        return os.getenv(key, default)
+
+
+# LLM Provider: "groq" (free), "gemini" (free) or "anthropic" (paid)
+LLM_PROVIDER = _get_secret("LLM_PROVIDER", "groq")
+
+GROQ_API_KEY = _get_secret("GROQ_API_KEY")
+GOOGLE_API_KEY = _get_secret("GOOGLE_API_KEY")
+ANTHROPIC_API_KEY = _get_secret("ANTHROPIC_API_KEY")
+TAVILY_API_KEY = _get_secret("TAVILY_API_KEY")
 
 # LLM settings per provider
 LLM_MODELS = {
