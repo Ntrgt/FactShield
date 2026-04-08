@@ -2,7 +2,7 @@
 
 **FactShield**, kullanıcıdan gelen bir haber linki veya ham metin üzerinden iddiaları ayrıştıran, internette arama yaparak bu iddiaları doğrulayan ve kanıta dayalı güven skoru üreten bir yapay zeka uygulamasıdır.
 
-🔗 **Canlı Demo:** [https://ntrgt-factshield.streamlit.app](https://ntrgt-factshield.streamlit.app)
+🔗 **Canlı Demo:** [https://factshield-sjvxrhvdnumqmpfvd7w549.streamlit.app](https://factshield-sjvxrhvdnumqmpfvd7w549.streamlit.app)
 
 ---
 
