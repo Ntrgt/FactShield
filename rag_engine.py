@@ -1,9 +1,8 @@
-"""RAG engine: searches for evidence, stores in vector DB, and verifies claims."""
+"""RAG engine: searches for evidence and verifies claims."""
 
 import json
 import re
 
-import chromadb
 from langchain_core.messages import HumanMessage, SystemMessage
 from tavily import TavilyClient
 
@@ -40,10 +39,7 @@ class RAGEngine:
 
         self.search_client = TavilyClient(api_key=config.TAVILY_API_KEY)
         self.llm = create_llm()
-        self.chroma_client = chromadb.Client()
-        self.collection = self.chroma_client.get_or_create_collection(
-            name="factshield_evidence"
-        )
+        self._evidence_store: dict[int, list[dict]] = {}
 
     def search_evidence(self, claim: str) -> list[dict]:
         """Search the web for evidence related to the given claim."""
@@ -59,50 +55,26 @@ class RAGEngine:
             raise RuntimeError(f"Arama sırasında hata oluştu: {e}") from e
 
     def store_evidence(self, claim_id: int, evidence_list: list[dict]) -> None:
-        """Store evidence documents in the vector database."""
-        if not evidence_list:
-            return
-
-        documents = []
-        metadatas = []
-        ids = []
-
-        for i, ev in enumerate(evidence_list):
+        """Store evidence documents in memory."""
+        stored = []
+        for ev in evidence_list:
             content = ev.get("content", "")
             if not content:
                 continue
-            documents.append(content[:2000])
-            metadatas.append({
-                "claim_id": claim_id,
+            stored.append({
+                "content": content[:2000],
                 "url": ev.get("url", ""),
                 "title": ev.get("title", ""),
                 "score": ev.get("score", 0.0),
             })
-            ids.append(f"claim_{claim_id}_ev_{i}")
-
-        if documents:
-            self.collection.upsert(
-                documents=documents,
-                metadatas=metadatas,
-                ids=ids,
-            )
+        self._evidence_store[claim_id] = stored
 
     def retrieve_evidence(self, claim: str, claim_id: int) -> list[dict]:
-        """Retrieve stored evidence relevant to the claim from the vector DB."""
-        try:
-            results = self.collection.query(
-                query_texts=[claim],
-                n_results=config.TOP_K_RESULTS,
-                where={"claim_id": claim_id},
-            )
-        except Exception:
-            return []
-
-        evidence = []
-        if results and results["documents"]:
-            for doc, meta in zip(results["documents"][0], results["metadatas"][0]):
-                evidence.append({"content": doc, **meta})
-        return evidence
+        """Retrieve stored evidence for the claim, sorted by relevance score."""
+        evidence = self._evidence_store.get(claim_id, [])
+        return sorted(evidence, key=lambda x: x.get("score", 0), reverse=True)[
+            : config.TOP_K_RESULTS
+        ]
 
     def verify_claim(self, claim: str, evidence: list[dict]) -> dict:
         """Use LLM to verify a claim against the retrieved evidence."""
